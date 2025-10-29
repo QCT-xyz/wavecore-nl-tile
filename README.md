@@ -27,3 +27,6 @@ Next steps
 	•	Add Ξ-weighted objective J = E_cut − α Ξ
 	•	Add schedule policies: fixed, chirp, alternating
 	•	Benchmark on small Max-Cut sets
+
+## Visualization
+![Ξ vs J](docs/xi_vs_j.png)
