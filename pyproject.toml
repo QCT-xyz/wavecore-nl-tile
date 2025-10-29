@@ -1,0 +1,38 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "wavecore-nl-tile"
+version = "0.0.1"
+description = "WaveCore-NL Tile Dev Kit: photonic schedules with Ξ-aware objective"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+authors = [{name = "QuantumCore Technologies", email = "team@qct.xyz"}]
+
+dependencies = [
+  "numpy>=1.26",
+  "scipy>=1.11",
+  "onnx>=1.16",
+  "onnxruntime>=1.18",
+  "pydantic>=2.6",
+  "pydantic-settings>=2.2",
+  "click>=8.1"
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.0",
+  "black>=24.3",
+  "ruff>=0.5",
+  "mypy>=1.10",
+  "pre-commit>=3.7"
+]
+
+[tool.black]
+line-length = 100
+[tool.ruff]
+line-length = 100
+[tool.mypy]
+strict = true
