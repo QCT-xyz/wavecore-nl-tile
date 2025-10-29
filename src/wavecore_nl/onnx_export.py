@@ -1,10 +1,18 @@
 from pathlib import Path
+from typing import Protocol
+import numpy as np
 import onnx
 from onnx import helper, numpy_helper
 from .config import settings
 
 
-def export_stub(schedule, out_path: str | Path = "onnx/controller.onnx") -> Path:
+class ScheduleLike(Protocol):
+    phases: np.ndarray
+    pump: np.ndarray
+    coupling: np.ndarray
+
+
+def export_stub(schedule: ScheduleLike, out_path: str | Path = "onnx/controller.onnx") -> Path:
     out_path = Path(out_path)
     out_path.parent.mkdir(parents=True, exist_ok=True)
 
