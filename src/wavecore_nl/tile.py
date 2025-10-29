@@ -18,16 +18,20 @@ class RunResult:
     cut_value: float
     spins: np.ndarray
     xi: float
+    j_score: float  # J = E_cut - alpha * xi
 
 
 class Tile:
-    def __init__(self, modes: int | None = None):
+    def __init__(self, modes: int | None = None, alpha: float | None = None):
         self.modes = modes or settings.modes
         self.depth = settings.depth
+        self.alpha = settings.alpha if alpha is None else alpha
 
     def synthesize(
         self, J: np.ndarray, alpha: float | None = None, policy: str = "chirp"
     ) -> Schedule:
+        if alpha is not None:
+            self.alpha = float(alpha)
         depth = self.depth
         modes = self.modes
         phases = np.linspace(0, np.pi, depth)[:, None] * np.ones((depth, modes))
@@ -41,16 +45,23 @@ class Tile:
     def run(self, sched: Schedule) -> RunResult:
         last_phase = sched.phases[-1]
         spins = np.where(np.sin(last_phase) >= 0, 1, -1)
-        J = sched.coupling
-        tri = np.triu_indices(J.shape[0], 1)
+        Jmat = sched.coupling
+        tri = np.triu_indices(Jmat.shape[0], 1)
         sprod = np.outer(spins, spins)
-        cut_value = float(np.sum(0.5 * (1.0 - sprod[tri]) * np.abs(J[tri])))
+        cut_value = float(np.sum(0.5 * (1.0 - sprod[tri]) * np.abs(Jmat[tri])))
 
         phasors = np.exp(1j * last_phase)
         xi = xi_from_phasors(phasors)
 
         spectrum = np.abs(np.fft.rfft(last_phase))
         phase_noise = np.var(last_phase) * np.ones_like(spectrum)
+
+        j_score = cut_value - self.alpha * xi
         return RunResult(
-            spectrum=spectrum, phase_noise=phase_noise, cut_value=cut_value, spins=spins, xi=xi
+            spectrum=spectrum,
+            phase_noise=phase_noise,
+            cut_value=cut_value,
+            spins=spins,
+            xi=xi,
+            j_score=j_score,
         )
