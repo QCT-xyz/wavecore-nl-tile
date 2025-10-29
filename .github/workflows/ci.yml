@@ -1,47 +1,118 @@
 name: ci
+name: ci
+on:
 on:
   push: { branches: [main] }
+  push: { branches: [main] }
+  pull_request:
   pull_request:
 permissions:
+permissions:
+  contents: write
   contents: write
 jobs:
+jobs:
+  test:
   test:
     runs-on: ubuntu-latest
+    runs-on: ubuntu-latest
+    steps:
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
         with:
           fetch-depth: 0
+          fetch-depth: 0
+          persist-credentials: true
           persist-credentials: true
           ref: ${{ github.ref }}
+          ref: ${{ github.ref }}
+      - uses: actions/setup-python@v5
       - uses: actions/setup-python@v5
         with: { python-version: "3.11" }
+        with: { python-version: "3.11" }
+      - run: python -m pip install --upgrade pip
       - run: python -m pip install --upgrade pip
       - run: python -m pip install .[dev]
+      - run: python -m pip install .[dev]
+      - run: ruff check .
       - run: ruff check .
       - run: black --check .
+      - run: black --check .
+      - run: mypy src
       - run: mypy src
       - run: pytest -q
+      - run: pytest -q
+      - run: python -m pip install matplotlib
       - run: python -m pip install matplotlib
       - run: ./examples/ci_generate_artifacts.sh
+      - run: ./examples/ci_generate_artifacts.sh
+      - uses: actions/upload-artifact@v4
       - uses: actions/upload-artifact@v4
         with:
+        with:
+          name: xi-vs-j
           name: xi-vs-j
           path: artifacts/xi_vs_j.png
+          path: artifacts/xi_vs_j.png
+          if-no-files-found: error
           if-no-files-found: error
       - name: Commit docs/xi_vs_j.png back to repo
+      - name: Commit docs/xi_vs_j.png back to repo
+        if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/heads/') }}
+        if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/heads/') }}
+        env:
+        env:
+          BRANCH_NAME: ${{ github.ref_name }}
+          BRANCH_NAME: ${{ github.ref_name }}
+        run: |
+        run: |
+          set -euo pipefail
+          set -euo pipefail
+          mkdir -p docs
+          mkdir -p docs
+          cp -f artifacts/xi_vs_j.png docs/xi_vs_j.png
+          cp -f artifacts/xi_vs_j.png docs/xi_vs_j.png
+          git config user.name "github-actions[bot]"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add docs/xi_vs_j.png
+          git add docs/xi_vs_j.png
+          if git diff --cached --quiet; then
+          if git diff --cached --quiet; then
+            echo "No doc image changes."
+            echo "No doc image changes."
+            exit 0
+            exit 0
+          fi
+          fi
+          git commit -m "docs: update Xi vs J plot [skip ci]"
+          git commit -m "docs: update Xi vs J plot [skip ci]"
+          git push origin "HEAD:${BRANCH_NAME}"
+          git push origin "HEAD:${BRANCH_NAME}"
+      - name: Generate sweep plot
+        run: python examples/benchmark_sweep.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: xi-j-sweep
+          path: artifacts/xi_j_sweep.png
+          if-no-files-found: error
+      - name: Commit docs/xi_j_sweep.png back to repo
         if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/heads/') }}
         env:
           BRANCH_NAME: ${{ github.ref_name }}
         run: |
           set -euo pipefail
           mkdir -p docs
-          cp -f artifacts/xi_vs_j.png docs/xi_vs_j.png
+          cp -f artifacts/xi_j_sweep.png docs/xi_j_sweep.png
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add docs/xi_vs_j.png
+          git add docs/xi_j_sweep.png
           if git diff --cached --quiet; then
             echo "No doc image changes."
             exit 0
           fi
-          git commit -m "docs: update Xi vs J plot [skip ci]"
+          git commit -m "docs: update Xi–J sweep plot [skip ci]"
           git push origin "HEAD:${BRANCH_NAME}"
