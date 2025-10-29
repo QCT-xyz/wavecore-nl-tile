@@ -15,3 +15,12 @@ jobs:
       - run: black --check .
       - run: mypy src
       - run: pytest -q
+      # Generate visualization artifact
+      - run: python -m pip install matplotlib
+      - run: ./examples/ci_generate_artifacts.sh
+      # Upload artifact
+      - uses: actions/upload-artifact@v4
+        with:
+          name: xi-vs-j
+          path: artifacts/xi_vs_j.png
+          if-no-files-found: error

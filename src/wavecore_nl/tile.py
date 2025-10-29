@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 import numpy as np
 from .config import settings
-from .coherence import xi_from_phasors
+from .coherence import xi_over_depth
 
 
 @dataclass
@@ -34,8 +34,28 @@ class Tile:
             self.alpha = float(alpha)
         depth = self.depth
         modes = self.modes
-        phases = np.linspace(0, np.pi, depth)[:, None] * np.ones((depth, modes))
-        pump = np.linspace(0.1, 1.0, depth)
+
+        # --- schedule policies ---
+        if policy == "fixed":
+            # Constant phase sheet, steady pump -> high Ξ, minimal cut dynamics
+            phases = np.zeros((depth, modes))
+            pump = np.full(depth, 0.7)
+        elif policy == "alternating":
+            # Alternate phase windows and pump bursts -> lower Ξ, more cut structure
+            phases = np.zeros((depth, modes))
+            for d in range(depth):
+                if d % 2 == 0:
+                    phases[d] = np.linspace(0.0, np.pi, modes)
+                else:
+                    phases[d] = np.linspace(np.pi, 2.0 * np.pi, modes)
+            pump = np.tile([0.35, 0.95], (depth // 2 + 1))[:depth]
+        else:
+            # "chirp" (default): gentle time chirp + per-mode offset -> mid Ξ
+            base = np.linspace(0.0, np.pi, depth)[:, None]  # time ramp
+            per_mode = np.linspace(0.0, np.pi / 4.0, modes)[None, :]  # mode-dependent offset
+            phases = (base + per_mode) % (2.0 * np.pi)
+            pump = np.linspace(0.2, 1.0, depth)
+
         coupling = np.zeros((modes, modes))
         n = min(J.shape[0], modes)
         scale = np.max(np.abs(J)) + 1e-9
@@ -50,8 +70,8 @@ class Tile:
         sprod = np.outer(spins, spins)
         cut_value = float(np.sum(0.5 * (1.0 - sprod[tri]) * np.abs(Jmat[tri])))
 
-        phasors = np.exp(1j * last_phase)
-        xi = xi_from_phasors(phasors)
+        # depth-aware coherence over the whole schedule
+        xi = xi_over_depth(sched.phases)
 
         spectrum = np.abs(np.fft.rfft(last_phase))
         phase_noise = np.var(last_phase) * np.ones_like(spectrum)
